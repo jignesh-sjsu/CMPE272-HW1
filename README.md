@@ -1,6 +1,6 @@
 # CMPE272-HW1
 
-##Repository for CMPE272 Assignment #1
+## Repository for CMPE272 Assignment #1
 
 ###### Assignment
 - [What is Ansible](https://www.ansible.com/resources/videos/quick-start-video)?
