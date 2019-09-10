@@ -1,0 +1,58 @@
+- hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Load variables
+      include_vars:
+         dir: variables/cfn_stack
+         name: cfn_stack_vars
+    - name: Retrieve Cloudformation facts
+      cloudformation_facts:
+        stack_name: "{{ cfn_stack_vars.StackName }}"
+
+    - name: Add Pubilc IP address as host in webserver group to in-memory inventory
+      add_host:
+        name: "{{ ansible_facts['cloudformation'][cfn_stack_vars.StackName]['stack_outputs']['PublicIP'] }}"
+        groups: webserver
+        ansible_ssh_private_key_file: "~/.ssh/{{ cfn_stack_vars.KeyName }}.pem"
+
+- name: Undeploy nginx webserver
+  hosts: webserver
+  remote_user: centos
+  become: yes
+  gather_facts: false
+
+  tasks:
+    - name: Checking EC2 connection
+      wait_for_connection:
+      ignore_errors: yes
+
+    - name: Stop nginx webserver
+      service: name=nginx enabled=no state=stopped
+      ignore_errors: yes
+
+    - name: Uninstall nginx webserver
+      yum: name=nginx state=absent update_cache=true
+      
+    - name: Uninstall EPEL release for nginx
+      yum: name=epel-release state=absent
+      
+    - name: Remove index.html file
+      file: path=/usr/share/nginx/html/index.html state=absent 
+      
+- hosts: localhost
+  connection: local
+  gather_facts: false
+  
+  tasks:
+    - name: Load variables
+      include_vars:
+         dir: variables/cfn_stack
+         name: cfn_stack_vars
+    - name: Delete cloudformation stack to Terminate EC2 instance
+      cloudformation:
+        stack_name: "{{cfn_stack_vars.StackName}}"
+        region: "{{cfn_stack_vars.Region}}"
+        state: "absent"
+      ignore_errors: yes

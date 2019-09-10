@@ -1,0 +1,6 @@
+Region: "us-east-1"
+KeyName: "systeam-keypair"
+InstanceType: "t2.micro"
+AMIId: "ami-0199893068f89a449"
+SSHLocation: "0.0.0.0/0"
+StackName: "EC2InstanceStack"
