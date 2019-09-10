@@ -1,0 +1,81 @@
+{
+
+  "Description" : "CloudFormation Template to provision EC2 instance.",
+
+  "Parameters" : {
+    "KeyName": {
+      "Description" : "Name of existing EC2 KeyPair to enable SSH access to the instance",
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "ConstraintDescription" : "Must be the name of an existing EC2 KeyPair."
+    },
+
+    "InstanceType" : {
+      "Description" : "EC2 instance type",
+      "Type" : "String",
+      "Default" : "t2.micro"
+    },
+
+    "ImageId" : {
+       "Description" : "AMI Id to use for EC2 instance deployment",
+       "Type" : "String",
+       "Default" : "ami-0199893068f89a449"
+    },
+
+    "SSHLocation" : {
+      "Description" : "The IP address range that can be used to SSH to the EC2 instances",
+      "Type": "String",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "Default": "0.0.0.0/0"
+   }
+  },
+
+  "Resources" : {
+    "EC2Instance" : {
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "InstanceType" : { "Ref" : "InstanceType" },
+        "SecurityGroups" : [ { "Ref" : "SSHAccessSecurityGroup" }, { "Ref" : "WebserverAccessSecurityGroup"} ],
+        "KeyName" : { "Ref" : "KeyName" },
+        "ImageId" : { "Ref" : "ImageId" } 
+      }
+    },
+
+    "SSHAccessSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable SSH access via port 22",
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "22",
+          "ToPort" : "22",
+          "CidrIp" : { "Ref" : "SSHLocation"}
+        } ]
+      }
+    },
+
+   "WebserverAccessSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable Webserver access via port 80",
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "80",
+          "ToPort" : "80",
+          "CidrIp" : { "Ref" : "SSHLocation"}
+        } ]
+      }
+    } 
+  },
+
+  "Outputs" : {
+    "PublicDNS" : {
+      "Description" : "Public DNSName of the newly created EC2 instance",
+      "Value" : { "Fn::GetAtt" : [ "EC2Instance", "PublicDnsName" ] }
+    },
+    "PublicIP" : {
+      "Description" : "Public IP address of the newly created EC2 instance",
+      "Value" : { "Fn::GetAtt" : [ "EC2Instance", "PublicIp" ] }
+    }
+  }
+}

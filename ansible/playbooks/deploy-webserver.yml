@@ -1,0 +1,63 @@
+- hosts: localhost
+  connection: local
+  gather_facts: false
+
+  tasks:
+    - name: Load variables
+      include_vars:
+         dir: variables/cfn_stack
+         name: cfn_stack_vars
+    - name: Create cloudformation stack to provision EC2 instance
+      cloudformation:
+        stack_name: "{{cfn_stack_vars.StackName}}" 
+        region: "{{cfn_stack_vars.Region}}"
+        state: "present"
+        template: cloudformation/provision-ec2-instance.template
+        template_parameters:
+          KeyName: "{{cfn_stack_vars.KeyName}}" 
+          InstanceType: "{{cfn_stack_vars.InstanceType}}" 
+          ImageId: "{{cfn_stack_vars.AMIId}}"
+          SSHLocation: "{{cfn_stack_vars.SSHLocation}}"
+
+    - name: Retrieve Cloudformation facts 
+      cloudformation_facts:
+        stack_name: "{{ cfn_stack_vars.StackName }}"
+
+    - name: Add Pubilc IP address as host in webserver group to in-memory inventory 
+      add_host:
+        name: "{{ ansible_facts['cloudformation'][cfn_stack_vars.StackName]['stack_outputs']['PublicIP'] }}" 
+        groups: webserver
+        ansible_ssh_private_key_file: "~/.ssh/{{ cfn_stack_vars.KeyName }}.pem"
+
+- name: Deploy nginx webserver
+  hosts: webserver
+  remote_user: centos
+  become: yes
+  gather_facts: false
+
+  tasks:
+    - name: Load variables
+      include_vars:
+         dir: variables/webserver
+         name: webserver_vars
+    - name: Wait for EC2 to become available
+      wait_for_connection:
+ 
+    - name: install python 
+      raw: test -e /usr/bin/python || (sudo yum install -y update && sudo yum install -y python)
+
+    - name: Install EPEL release for nginx
+      yum: name=epel-release state=present
+
+    - name: Install nginx webserver
+      yum: name=nginx state=installed update_cache=true
+      notify:
+        - start nginx webserver
+
+    - name: Upload the default index.html file
+      template: src=html_files/index.html dest=/usr/share/nginx/html/ mode=0644
+
+  handlers:
+      - name: start nginx webserver
+        service: name=nginx enabled=yes state=started
+        
