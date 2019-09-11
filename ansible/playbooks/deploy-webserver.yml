@@ -19,7 +19,7 @@
           ImageId: "{{cfn_stack_vars.AMIId}}"
           SSHLocation: "{{cfn_stack_vars.SSHLocation}}"
 
-    - name: Retrieve Cloudformation facts 
+    - name: Retrieve cloudformation facts 
       cloudformation_facts:
         stack_name: "{{ cfn_stack_vars.StackName }}"
 
